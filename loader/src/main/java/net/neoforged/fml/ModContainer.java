@@ -11,6 +11,8 @@ import java.util.EnumMap;
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ForkJoinWorkerThread;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import net.neoforged.bus.api.BusBuilder;
 import net.neoforged.bus.api.Event;
@@ -149,6 +151,24 @@ public abstract class ModContainer {
      */
     @Nullable
     public abstract IEventBus getEventBus();
+
+    /**
+     * Executes a task, ensures correct context classloader if executed in a {@link ForkJoinWorkerThread}.
+     * 
+     * @param task task to accept
+     */
+    public final void execute(Runnable task) {
+        this.execute(container -> task.run());
+    }
+
+    /**
+     * Executes a task, ensures correct context classloader if executed in a {@link ForkJoinWorkerThread}.
+     * 
+     * @param task task to accept
+     */
+    public void execute(Consumer<ModContainer> task) {
+        task.accept(this);
+    }
 
     /**
      * Accept an arbitrary event for processing by the mod. Posted to {@link #getEventBus()}.

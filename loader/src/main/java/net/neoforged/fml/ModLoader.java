@@ -232,7 +232,7 @@ public final class ModLoader {
 
                                     try {
                                         ModLoadingContext.get().setActiveContainer(modContainer);
-                                        task.accept(modContainer);
+                                        modContainer.execute(task);
                                     } finally {
                                         progress.increment();
                                         ModLoadingContext.get().setActiveContainer(null);

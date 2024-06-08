@@ -11,6 +11,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ForkJoinWorkerThread;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.EventBusErrorMessage;
@@ -37,6 +39,7 @@ public class FMLModContainer extends ModContainer {
     private final IEventBus eventBus;
     private final List<Class<?>> modClasses;
     private final Module layer;
+    private final ClassLoader classLoader;
 
     public FMLModContainer(IModInfo info, List<String> entrypoints, ModFileScanData modFileScanResults, ModuleLayer gameLayer) {
         super(info);
@@ -48,6 +51,7 @@ public class FMLModContainer extends ModContainer {
                 .allowPerPhasePost()
                 .build();
         this.layer = gameLayer.findModule(info.getOwningFile().moduleName()).orElseThrow();
+        this.classLoader = layer.getClassLoader();
 
         final FMLJavaModLoadingContext contextExtension = new FMLJavaModLoadingContext(this);
         this.contextExtension = () -> contextExtension;
@@ -128,5 +132,19 @@ public class FMLModContainer extends ModContainer {
     @Override
     public IEventBus getEventBus() {
         return this.eventBus;
+    }
+
+    @Override
+    public void execute(Consumer<ModContainer> task) {
+        if (Thread.currentThread() instanceof ForkJoinWorkerThread worker) {
+            final var contextClassLoader = worker.getContextClassLoader();
+            if (classLoader != contextClassLoader) {
+                worker.setContextClassLoader(classLoader);
+                task.accept(this);
+                worker.setContextClassLoader(contextClassLoader);
+                return;
+            }
+        }
+        task.accept(this);
     }
 }
